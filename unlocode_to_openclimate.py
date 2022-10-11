@@ -109,16 +109,16 @@ def handle_input_row(row, subdivs):
     if len(row['Function']) < 3 or row['Function'][2] != "3":
         return
 
-    actor_id = f'{row["ISO 3166-1"]}-{row["LOCODE"]}'
+    actor_id = f'{row["ISO 3166-1"].strip()}-{row["LOCODE"].strip()}'
 
     if row["SubDiv"] == "":
-        parent_id = row["ISO 3166-1"]
+        parent_id = row["ISO 3166-1"].strip()
     else:
-        subdiv_id = f'{row["ISO 3166-1"]}-{row["SubDiv"]}'
+        subdiv_id = f'{row["ISO 3166-1"].strip()}-{row["SubDiv"].strip()}'
         if subdiv_id in subdivs:
             parent_id = subdiv_id
         else:
-            parent_id = row["ISO 3166-1"]
+            parent_id = row["ISO 3166-1"].strip()
 
     write_output_row("Actor", ACTOR_COLUMNS, {
         "actor_id": actor_id,
@@ -159,7 +159,7 @@ def read_subdivs():
     with open(f'{INPUT_DIR}/2022-1 SubdivisionCodes.csv') as csvfile:
             reader = csv.DictReader(csvfile, fieldnames=SUBDIVS_COLUMNS)
             for row in reader:
-                subdivs[f'{row["country_code"]}-{row["region_code"]}'] = {
+                subdivs[f'{row["country_code"].strip()}-{row["region_code"].strip()}'] = {
                     "name": row["name"],
                     "type": row["type"]
                 }
