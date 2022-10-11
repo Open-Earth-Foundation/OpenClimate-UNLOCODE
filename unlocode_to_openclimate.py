@@ -109,6 +109,11 @@ def handle_input_row(row, subdivs):
     if len(row['Function']) < 3 or row['Function'][2] != "3":
         return
 
+    # International waters! We don't handle this for now
+
+    if row["ISO 3166-1"].strip() == "XZ":
+        return
+
     actor_id = f'{row["ISO 3166-1"].strip()}-{row["LOCODE"].strip()}'
 
     if row["SubDiv"] == "":
