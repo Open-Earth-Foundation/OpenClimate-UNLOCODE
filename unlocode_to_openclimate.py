@@ -51,6 +51,13 @@ ACTOR_NAME_COLUMNS = [
     "datasource_id"
 ]
 
+ACTOR_IDENTIFIER_COLUMNS = [
+    "actor_id",
+    "identifier",
+    "namespace",
+    "datasource_id"
+]
+
 TERRITORY_COLUMNS = [
     "actor_id",
     "lat",
@@ -141,6 +148,13 @@ def handle_input_row(row, subdivs):
         "datasource_id": DATASOURCE["datasource_id"]
     })
 
+    write_output_row("ActorIdentifier", ACTOR_IDENTIFIER_COLUMNS, {
+        "actor_id": actor_id,
+        "identifier": actor_id,
+        "namespace": "UNLOCODE",
+        "datasource_id": DATASOURCE["datasource_id"]
+    })
+
     if (row["NameWoDiacritics"] != row["Name"]):
         write_output_row("ActorName", ACTOR_NAME_COLUMNS, {
             "actor_id": actor_id,
@@ -177,6 +191,7 @@ def main():
 
     prepare_output_file('Actor', ACTOR_COLUMNS)
     prepare_output_file('ActorName', ACTOR_NAME_COLUMNS)
+    prepare_output_file('ActorIdentifier', ACTOR_IDENTIFIER_COLUMNS)
     prepare_output_file('Territory', TERRITORY_COLUMNS)
 
     subdivs = read_subdivs()
