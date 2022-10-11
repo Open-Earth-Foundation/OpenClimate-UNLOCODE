@@ -58,6 +58,13 @@ TERRITORY_COLUMNS = [
     "datasource_id"
 ]
 
+SUBDIVS_COLUMNS = [
+    "country_code",
+    "region_code",
+    "name",
+    "type"
+]
+
 def write_csv(name, rows):
     with open(f'{OUTPUT_DIR}/{name}.csv', mode='w') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=rows[0].keys())
@@ -90,7 +97,7 @@ def coordinates_to_decimal(coords):
 
     return (lat, lng)
 
-def handle_input_row(row):
+def handle_input_row(row, subdivs):
 
     # Skip if no LOCODE
 
@@ -103,7 +110,15 @@ def handle_input_row(row):
         return
 
     actor_id = f'{row["ISO 3166-1"]}-{row["LOCODE"]}'
-    parent_id = f'{row["ISO 3166-1"]}-{row["SubDiv"]}' if row["SubDiv"] != '' else row["ISO 3166-1"]
+
+    if row["SubDiv"] == "":
+        parent_id = row["ISO 3166-1"]
+    else:
+        subdiv_id = f'{row["ISO 3166-1"]}-{row["SubDiv"]}'
+        if subdiv_id in subdivs:
+            parent_id = subdiv_id
+        else:
+            parent_id = row["ISO 3166-1"]
 
     write_output_row("Actor", ACTOR_COLUMNS, {
         "actor_id": actor_id,
@@ -139,6 +154,17 @@ def handle_input_row(row):
             "datasource_id": DATASOURCE["datasource_id"]
         })
 
+def read_subdivs():
+    subdivs = {}
+    with open(f'{INPUT_DIR}/2022-1 SubdivisionCodes.csv') as csvfile:
+            reader = csv.DictReader(csvfile, fieldnames=SUBDIVS_COLUMNS)
+            for row in reader:
+                subdivs[f'{row["country_code"]}-{row["region_code"]}'] = {
+                    "name": row["name"],
+                    "type": row["type"]
+                }
+    return subdivs
+
 def main():
 
     write_csv('Publisher', [PUBLISHER])
@@ -148,11 +174,13 @@ def main():
     prepare_output_file('ActorName', ACTOR_NAME_COLUMNS)
     prepare_output_file('Territory', TERRITORY_COLUMNS)
 
+    subdivs = read_subdivs()
+
     for i in [1, 2, 3]:
         with open(f'{INPUT_DIR}/2022-1 UNLOCODE CodeListPart{i}.csv') as csvfile:
             reader = csv.DictReader(csvfile, fieldnames=LOCODE_COLUMNS)
             for row in reader:
-                handle_input_row(row)
+                handle_input_row(row, subdivs)
 
 
 if __name__ == "__main__":
