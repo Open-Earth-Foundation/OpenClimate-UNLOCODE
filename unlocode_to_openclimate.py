@@ -2,6 +2,7 @@
 # unlocode_to_openclimate.py -- convert UNLOCODE data to OpenClimate format
 
 import csv
+import re
 
 INPUT_DIR = 'loc221csv'
 OUTPUT_DIR = 'UNLOCODE'
@@ -21,18 +22,18 @@ DATASOURCE = {
 }
 
 LOCODE_COLUMNS = [
-  "Ch",
-  "ISO 3166-1",
-  "LOCODE",
-  "Name",
-  "NameWoDiacritics",
-  "SubDiv",
-  "Function",
-  "Status",
-  "Date",
-  "IATA",
-  "Coordinates",
-  "Remarks"
+    "Ch",
+    "ISO 3166-1",
+    "LOCODE",
+    "Name",
+    "NameWoDiacritics",
+    "SubDiv",
+    "Function",
+    "Status",
+    "Date",
+    "IATA",
+    "Coordinates",
+    "Remarks"
 ]
 
 ACTOR_COLUMNS = [
@@ -72,21 +73,25 @@ SUBDIVS_COLUMNS = [
     "type"
 ]
 
+
 def write_csv(name, rows):
     with open(f'{OUTPUT_DIR}/{name}.csv', mode='w') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
 
+
 def prepare_output_file(name, column_names):
     with open(f'{OUTPUT_DIR}/{name}.csv', mode='w') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=column_names)
         writer.writeheader()
 
+
 def write_output_row(filename, column_names, row):
     with open(f'{OUTPUT_DIR}/{filename}.csv', mode='a') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=column_names)
         writer.writerow(row)
+
 
 def coordinates_to_decimal(coords):
 
@@ -94,15 +99,18 @@ def coordinates_to_decimal(coords):
     lat_min = int(coords[2:4])
     lat_dir = coords[4:5]
 
-    lat = round(lat_deg*10000 + (lat_min*10000)/60) * (-1 if lat_dir == "S" else 1)
+    lat = round(lat_deg*10000 + (lat_min*10000)/60) * \
+        (-1 if lat_dir == "S" else 1)
 
     lng_deg = int(coords[6:9])
     lng_min = int(coords[9:11])
     lng_dir = coords[11:12]
 
-    lng = round(lng_deg*10000 + (lng_min*10000)/60) * (-1 if lng_dir == "W" else 1)
+    lng = round(lng_deg*10000 + (lng_min*10000)/60) * \
+        (-1 if lng_dir == "W" else 1)
 
     return (lat, lng)
+
 
 def handle_input_row(row, subdivs):
 
@@ -112,8 +120,23 @@ def handle_input_row(row, subdivs):
         return
 
     # Test for function = road station; not perfect but...
+    # Test if name is air, rail, or ferry port with regular expression
+    regex = (
+        '^Port\sof'
+        '|\sPort$'
+        '|\sPt\s?/'
+        '|Pt\.'
+        '|\sPort\s?/'
+        '|\sApt\s?/'
+        '|\sApt$'
+        '|\sRailway\sStation.*'
+        '|\sFerryport'
+        '|Ferry\sPort'
+        '|\sTerminal'
+        '|.+Airport'
+    )
 
-    if len(row['Function']) < 3 or row['Function'][2] != "3":
+    if re.search(regex, row["Name"]):
         return
 
     # International waters! We don't handle this for now
@@ -173,16 +196,18 @@ def handle_input_row(row, subdivs):
             "datasource_id": DATASOURCE["datasource_id"]
         })
 
+
 def read_subdivs():
     subdivs = {}
     with open(f'{INPUT_DIR}/2022-1 SubdivisionCodes.csv') as csvfile:
-            reader = csv.DictReader(csvfile, fieldnames=SUBDIVS_COLUMNS)
-            for row in reader:
-                subdivs[f'{row["country_code"].strip()}-{row["region_code"].strip()}'] = {
-                    "name": row["name"],
-                    "type": row["type"]
-                }
+        reader = csv.DictReader(csvfile, fieldnames=SUBDIVS_COLUMNS)
+        for row in reader:
+            subdivs[f'{row["country_code"].strip()}-{row["region_code"].strip()}'] = {
+                "name": row["name"],
+                "type": row["type"]
+            }
     return subdivs
+
 
 def main():
 
