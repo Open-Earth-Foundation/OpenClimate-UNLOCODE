@@ -119,6 +119,8 @@ def handle_input_row(row, subdivs):
     if row["LOCODE"] == "":
         return
 
+    actor_id = f'{row["ISO 3166-1"].strip()}-{row["LOCODE"].strip()}'
+
     # Test for function = road station; not perfect but...
     # Test if name is air, rail, or ferry port with regular expression
     regex = (
@@ -136,65 +138,70 @@ def handle_input_row(row, subdivs):
         '|.+Airport'
     )
 
-    if re.search(regex, row["Name"]):
-        return
-
-    # International waters! We don't handle this for now
-
-    if row["ISO 3166-1"].strip() == "XZ":
-        return
-
-    actor_id = f'{row["ISO 3166-1"].strip()}-{row["LOCODE"].strip()}'
-
-    if row["SubDiv"] == "":
-        parent_id = row["ISO 3166-1"].strip()
+    if re.search(regex, row["Name"]) or row["ISO 3166-1"].strip() == "XZ":
+        write_output_row("Actor.delete", ["actor_id"], {
+            "actor_id": actor_id
+        })
+        write_output_row("ActorName.delete", ["actor_id"], {
+            "actor_id": actor_id
+        })
+        write_output_row("ActorIdentifier.delete", ["actor_id"], {
+            "actor_id": actor_id
+        })
+        write_output_row("Territory.delete", ["actor_id"], {
+            "actor_id": actor_id
+        })
     else:
-        subdiv_id = f'{row["ISO 3166-1"].strip()}-{row["SubDiv"].strip()}'
-        if subdiv_id in subdivs:
-            parent_id = subdiv_id
-        else:
+
+        if row["SubDiv"] == "":
             parent_id = row["ISO 3166-1"].strip()
+        else:
+            subdiv_id = f'{row["ISO 3166-1"].strip()}-{row["SubDiv"].strip()}'
+            if subdiv_id in subdivs:
+                parent_id = subdiv_id
+            else:
+                parent_id = row["ISO 3166-1"].strip()
 
-    write_output_row("Actor", ACTOR_COLUMNS, {
-        "actor_id": actor_id,
-        "type": "city",
-        "name": row["Name"],
-        "is_part_of": parent_id,
-        "datasource_id": DATASOURCE["datasource_id"]
-    })
+        write_output_row("Actor", ACTOR_COLUMNS, {
+            "actor_id": actor_id,
+            "type": "city",
+            "name": row["Name"],
+            "is_part_of": parent_id,
+            "datasource_id": DATASOURCE["datasource_id"]
+        })
 
-    write_output_row("ActorName", ACTOR_NAME_COLUMNS, {
-        "actor_id": actor_id,
-        "name": row["Name"],
-        "language": "und",
-        "preferred": 0,
-        "datasource_id": DATASOURCE["datasource_id"]
-    })
-
-    write_output_row("ActorIdentifier", ACTOR_IDENTIFIER_COLUMNS, {
-        "actor_id": actor_id,
-        "identifier": actor_id,
-        "namespace": "UNLOCODE",
-        "datasource_id": DATASOURCE["datasource_id"]
-    })
-
-    if (row["NameWoDiacritics"] != row["Name"]):
         write_output_row("ActorName", ACTOR_NAME_COLUMNS, {
             "actor_id": actor_id,
-            "name": row["NameWoDiacritics"],
+            "name": row["Name"],
             "language": "und",
             "preferred": 0,
             "datasource_id": DATASOURCE["datasource_id"]
         })
 
-    if row["Coordinates"] != "":
-        (lat, lng) = coordinates_to_decimal(row["Coordinates"])
-        write_output_row("Territory", TERRITORY_COLUMNS, {
+        write_output_row("ActorIdentifier", ACTOR_IDENTIFIER_COLUMNS, {
             "actor_id": actor_id,
-            "lat": lat,
-            "lng": lng,
+            "identifier": actor_id,
+            "namespace": "UNLOCODE",
             "datasource_id": DATASOURCE["datasource_id"]
         })
+
+        if (row["NameWoDiacritics"] != row["Name"]):
+            write_output_row("ActorName", ACTOR_NAME_COLUMNS, {
+                "actor_id": actor_id,
+                "name": row["NameWoDiacritics"],
+                "language": "und",
+                "preferred": 0,
+                "datasource_id": DATASOURCE["datasource_id"]
+            })
+
+        if row["Coordinates"] != "":
+            (lat, lng) = coordinates_to_decimal(row["Coordinates"])
+            write_output_row("Territory", TERRITORY_COLUMNS, {
+                "actor_id": actor_id,
+                "lat": lat,
+                "lng": lng,
+                "datasource_id": DATASOURCE["datasource_id"]
+            })
 
 
 def read_subdivs():
@@ -218,6 +225,11 @@ def main():
     prepare_output_file('ActorName', ACTOR_NAME_COLUMNS)
     prepare_output_file('ActorIdentifier', ACTOR_IDENTIFIER_COLUMNS)
     prepare_output_file('Territory', TERRITORY_COLUMNS)
+
+    prepare_output_file('Actor.delete', ["actor_id"])
+    prepare_output_file('ActorName.delete', ["actor_id"])
+    prepare_output_file('ActorIdentifier.delete', ["actor_id"])
+    prepare_output_file('Territory.delete', ["actor_id"])
 
     subdivs = read_subdivs()
 
