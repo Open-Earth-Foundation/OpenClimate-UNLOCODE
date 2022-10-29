@@ -119,7 +119,7 @@ def handle_input_row(row, subdivs):
     if row["LOCODE"] == "":
         return
 
-    actor_id = f'{row["ISO 3166-1"].strip()}-{row["LOCODE"].strip()}'
+    actor_id = f'{row["ISO 3166-1"].strip()} {row["LOCODE"].strip()}'
 
     # Test for function = road station; not perfect but...
     # Test if name is air, rail, or ferry port with regular expression
@@ -139,6 +139,8 @@ def handle_input_row(row, subdivs):
     )
 
     if re.search(regex, row["Name"]) or row["ISO 3166-1"].strip() == "XZ":
+        # We want to delete bad existing rows
+
         write_output_row("Actor.delete", ["actor_id"], {
             "actor_id": actor_id
         })
@@ -151,6 +153,7 @@ def handle_input_row(row, subdivs):
         write_output_row("Territory.delete", ["actor_id"], {
             "actor_id": actor_id
         })
+
     else:
 
         if row["SubDiv"] == "":
